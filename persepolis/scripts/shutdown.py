@@ -14,14 +14,12 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from persepolis.scripts import logger
+from persepolis.constants import OS
 from time import sleep
 import subprocess
 import platform
-import os
 
-# find os platform
 os_type = platform.system()
-
 
 def shutDown(parent, gid=None, category=None, password=None):
     # for queue >> gid = None
@@ -40,7 +38,7 @@ def shutDown(parent, gid=None, category=None, password=None):
 
         # update data base
         parent.temp_db.updateSingleTable(dict)
-    
+
     shutdown_status = "wait"
 
     while shutdown_status == "wait":
@@ -53,21 +51,48 @@ def shutDown(parent, gid=None, category=None, password=None):
             dict = parent.temp_db.returnGid(gid)
 
         shutdown_status = dict['shutdown']
- 
+
     if shutdown_status == "shutdown":
 
         logger.sendToLog("Shutting down in 20 seconds", "INFO")
         sleep(20)
-        if os_type == 'Linux':
-            os.system('echo "' + password + '" |sudo -S poweroff')
 
-        elif os_type == 'Darwin':
-            os.system('echo "' + password + '" |sudo -S shutdown -h now ')
+        if os_type == OS.LINUX:
 
-        elif os_type == 'Windows':
+            pipe = subprocess.Popen(['sudo', '-S', 'poweroff'],
+                                    stdout=subprocess.DEVNULL,
+                                    stdin=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL,
+                                    shell=False)
+
+            pipe.communicate(password.encode())
+
+        elif os_type == OS.DARWIN:
+
+            pipe = subprocess.Popen(['sudo', '-S', 'shutdown', '-h', 'now'],
+                                    stdout=subprocess.DEVNULL,
+                                    stdin=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL,
+                                    shell=False)
+
+            pipe.communicate(password.encode())
+
+        elif os_type == OS.WINDOWS:
+
             CREATE_NO_WINDOW = 0x08000000
-            subprocess.Popen(['shutdown', '-S'], shell=False,
+            subprocess.Popen(['shutdown', '-S'],
+                             stderr=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stdin=subprocess.PIPE,
+                             shell=False,
                              creationflags=CREATE_NO_WINDOW)
 
-        elif os_type == 'FreeBSD' or os_type == 'OpenBSD':
-            os.system('echo "' + password + '" |sudo -S shutdown -p now ')
+        elif os_type in OS.BSD_FAMILY:
+
+            pipe = subprocess.Popen(['sudo', '-S', 'shutdown', '-p', 'now'],
+                                    stdout=subprocess.DEVNULL,
+                                    stdin=subprocess.PIPE,
+                                    stderr=subprocess.DEVNULL,
+                                    shell=False)
+
+            pipe.communicate(password.encode())

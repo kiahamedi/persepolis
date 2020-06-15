@@ -14,30 +14,35 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from persepolis.scripts.play import playNotification
+from persepolis.constants import OS
 from PyQt5.QtCore import QSettings
+import subprocess
 import platform
 import os
+
 
 # platform
 os_type = platform.system()
 
-if os_type == 'Darwin':
+if os_type == OS.DARWIN:
     from persepolis.scripts.mac_notification import notifyMac
 
-elif os_type == 'Windows':
+elif os_type == OS.WINDOWS:
     from persepolis.scripts.windows_notification import Windows_Notification
 
 # notifySend use notify-send program in user's system for sending notifications
 # and use playNotification function in play.py file for playing sound
 # notifications
+
+
 def notifySend(message1, message2, time, sound, parent=None):
-    if os_type == 'Linux':
+
+    if os_type == OS.LINUX:
         notifications_path = '/usr/share/sounds/freedesktop/stereo/'
-    elif os_type == 'FreeBSD' or os_type == 'OpenBSD':
+    elif os_type in OS.BSD_FAMILY:
         notifications_path = '/usr/local/share/sounds/freedesktop/stereo/'
     else:
         notifications_path = ''
-
 
     if sound == 'ok':
         file = os.path.join(notifications_path, 'complete.oga')
@@ -59,7 +64,6 @@ def notifySend(message1, message2, time, sound, parent=None):
         file = os.path.join(notifications_path, 'dialog-information.oga')
         playNotification(str(file))
 
-
     # load settings
     persepolis_setting = QSettings('persepolis_download_manager', 'persepolis')
 
@@ -69,17 +73,24 @@ def notifySend(message1, message2, time, sound, parent=None):
     message1 = str(message1)
     message2 = str(message2)
 
-# using Qt notification or Native system notification
+    # using Qt notification or Native system notification
     if enable_notification == 'QT notification':
         parent.system_tray_icon.showMessage(message1, message2, 0, 10000)
     else:
-        if os_type == 'Linux' or os_type == 'FreeBSD' or os_type == 'OpenBSD':
-            os.system("notify-send --icon='persepolis' --app-name='Persepolis Download Manager' --expire-time='" +
-                      time + "' '" + message1 + "' \ '" + message2 + "' ")
+        if os_type in OS.UNIX_LIKE:
+            subprocess.Popen(['notify-send', '--icon', 'persepolis',
+                              '--app-name', 'Persepolis Download Manager',
+                              '--expire-time', time,
+                              message1, message2],
+                             stderr=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stdin=subprocess.PIPE,
+                             shell=False)
 
-        elif os_type == 'Darwin':
+        elif os_type == OS.OSX:
             notifyMac("Persepolis Download Manager", message1, message2)
 
-        elif os_type == 'Windows':
-            message = Windows_Notification(parent=parent, time=time, text1=message1, text2=message2, persepolis_setting=persepolis_setting)
+        elif os_type == OS.WINDOWS:
+            message = Windows_Notification(parent=parent, time=time, text1=message1,
+                                           text2=message2, persepolis_setting=persepolis_setting)
             message.show()

@@ -46,19 +46,20 @@ log_file = os.path.join(str(config_folder), 'persepolisdm.log')
 # get current time
 current_time = time.strftime('%Y/%m/%d %H:%M:%S')
 
-# find number of lines in log_file. 
+# find number of lines in log_file.
 with open(log_file) as f:
     lines = sum(1 for _ in f)
 
 # if number of lines in log_file is more than 300, then keep last 200 lines in log_file.
 if lines < 300:
     f = open(log_file, 'a')
-    f.writelines('Persepolis Download Manager, '\
-            + current_time\
-            +'\n')
+    f.writelines('===================================================\n'
+                 + 'Persepolis Download Manager, '
+                 + current_time
+                 + '\n')
     f.close()
 else:
-# keep last 200 lines
+    # keep last 200 lines
     line_num = lines - 200
     f = open(log_file, 'r')
     f_lines = f.readlines()
@@ -74,11 +75,10 @@ else:
     f.close()
 
     f = open(log_file, 'a')
-    f.writelines('Persepolis Download Manager, '\
-            + current_time\
-            +'\n')
+    f.writelines('Persepolis Download Manager, '
+                 + current_time
+                 + '\n')
     f.close()
-
 
 from persepolis.scripts.data_base import PersepolisDB, PluginsDB
 
@@ -148,22 +148,36 @@ if persepolis_setting.value('subfolder') == 'yes':
 for folder in folder_list:
     osCommands.makeDirs(folder)
 
-
 persepolis_setting.endGroup()
 
 # Browser integration for Firefox and chromium and google chrome
 for browser in ['chrome', 'chromium', 'opera', 'vivaldi', 'firefox']:
-    browserIntegration(browser)
+    json_done, native_done = browserIntegration(browser)
 
+    log_message = browser
+
+    if json_done == True:
+        log_message = log_message + ': ' + 'Json file is created successfully.\n'
+
+    else:
+        log_message = log_message + ': ' + 'Json ERROR!\n'
+
+    if native_done == True:
+        log_message = log_message + 'persepolis executer file is created successfully.\n'
+
+    elif native_done == False:
+        log_message = log_message + ': ' + 'persepolis executer file ERROR!\n'
+
+    logger.sendToLog(log_message)
 
 # get locale and set ui direction
 locale = str(persepolis_setting.value('settings/locale'))
 
 # right to left languages
-rtl_locale_list = ['fa_IR']
+rtl_locale_list = ['fa_IR', 'ar']
 
 # left to right languages
-ltr_locale_list = ['en_US', 'zh_CN', 'fr_FR']
+ltr_locale_list = ['en_US', 'zh_CN', 'fr_FR', 'pl_PL', 'nl_NL', 'pt_BR', 'es_ES', 'hu', 'tr', 'tr_TR']
 
 if locale in rtl_locale_list:
     persepolis_setting.setValue('ui_direction', 'rtl')
@@ -191,25 +205,11 @@ if persepolis_version < 2.6:
         logger.sendToLog(
             "compatibility ERROR!", "ERROR")
         logger.sendToLog(
-                str(e), "ERROR")
-
+            str(e), "ERROR")
 
     persepolis_version = 2.6
 
-if persepolis_version < 3.0:
-    persepolis_setting.beginGroup('settings')
-
-    for key in default_setting_dict.keys():
-
-        setting_value = default_setting_dict[key]
-        persepolis_setting.setValue(key, setting_value)
-
-    persepolis_setting.endGroup()
-
-
-    persepolis_setting.setValue('version/version', 3.0)
-
-if persepolis_version != 3.1:
+if persepolis_version < 3.1:
     # create an object for PersepolisDB
     persepolis_db = PersepolisDB()
 
@@ -219,8 +219,18 @@ if persepolis_version != 3.1:
     # close connections
     persepolis_db.closeConnections()
 
-persepolis_setting.setValue('version/version', 3.1)
+    persepolis_version = 3.1
 
+if persepolis_version < 3.2:
+    persepolis_setting.beginGroup('settings')
+
+    for key in default_setting_dict.keys():
+
+        setting_value = default_setting_dict[key]
+        persepolis_setting.setValue(key, setting_value)
+
+    persepolis_setting.endGroup()
+
+    persepolis_setting.setValue('version/version', 3.2)
 
 persepolis_setting.sync()
-

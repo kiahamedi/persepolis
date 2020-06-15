@@ -16,7 +16,6 @@
 
 from PyQt5.QtWidgets import QPushButton, QApplication, QWidget, QTabWidget, QVBoxLayout, QTableWidget, QAbstractItemView, QLabel, QLineEdit, QHBoxLayout, QSpinBox, QComboBox, QFrame, QCheckBox, QGridLayout
 from PyQt5.QtCore import Qt, QTranslator, QCoreApplication, QLocale
-from PyQt5 import QtWidgets, QtGui, QtCore
 from persepolis.gui import resources
 from PyQt5.QtGui import QIcon
 
@@ -28,7 +27,7 @@ class TextQueue_Ui(QWidget):
         self.persepolis_setting = persepolis_setting
         icons = ':/' + \
             str(self.persepolis_setting.value('settings/icons')) + '/'
-            
+
         # add support for other languages
         locale = str(self.persepolis_setting.value('settings/locale'))
         QLocale.setDefault(QLocale(locale))
@@ -41,10 +40,9 @@ class TextQueue_Ui(QWidget):
 
         if ui_direction == 'rtl':
             self.setLayoutDirection(Qt.RightToLeft)
-        
+
         elif ui_direction in 'ltr':
             self.setLayoutDirection(Qt.LeftToRight)
-
 
         self.setWindowIcon(QIcon.fromTheme('persepolis', QIcon(':/persepolis.svg')))
         window_verticalLayout = QVBoxLayout()
@@ -75,7 +73,6 @@ class TextQueue_Ui(QWidget):
         self.links_table.horizontalHeader().setSectionResizeMode(0)
         self.links_table.horizontalHeader().setStretchLastSection(True)
 
-
         # add_queue
         add_queue_horizontalLayout = QHBoxLayout()
 
@@ -98,7 +95,6 @@ class TextQueue_Ui(QWidget):
         links_tab_verticalLayout.addStretch(1)
         self.queue_tabWidget.addTab(self.links_tab, "")
 
-
         # options_tab
         self.options_tab = QWidget()
         options_tab_verticalLayout = QVBoxLayout(self.options_tab)
@@ -116,7 +112,7 @@ class TextQueue_Ui(QWidget):
         proxy_gridLayout = QGridLayout(self.proxy_frame)
 
         self.ip_lineEdit = QLineEdit(self.proxy_frame)
-        self.ip_lineEdit.setInputMethodHints(QtCore.Qt.ImhNone)
+        self.ip_lineEdit.setInputMethodHints(Qt.ImhNone)
         proxy_gridLayout.addWidget(self.ip_lineEdit, 0, 1, 1, 1)
 
         self.proxy_pass_label = QLabel(self.proxy_frame)
@@ -189,13 +185,12 @@ class TextQueue_Ui(QWidget):
         self.folder_pushButton.setIcon(QIcon(icons + 'folder'))
 
         self.folder_label = QLabel(self.folder_frame)
-        self.folder_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.folder_label.setAlignment(Qt.AlignCenter)
         folder_gridLayout.addWidget(self.folder_label, 1, 0, 1, 1)
         download_horizontalLayout.addWidget(self.folder_frame)
         options_tab_verticalLayout.addLayout(download_horizontalLayout)
 
         self.queue_tabWidget.addTab(self.options_tab, '')
-
 
         # limit Speed
         limit_verticalLayout = QVBoxLayout()
@@ -223,7 +218,6 @@ class TextQueue_Ui(QWidget):
 
         limit_connections_horizontalLayout = QHBoxLayout()
         limit_connections_horizontalLayout.addLayout(limit_verticalLayout)
-
 
         # number of connections
         connections_horizontalLayout = QHBoxLayout()
@@ -297,10 +291,3 @@ class TextQueue_Ui(QWidget):
 
         self.ok_pushButton.setText(QCoreApplication.translate("text_ui_tr", 'OK'))
         self.cancel_pushButton.setText(QCoreApplication.translate("text_ui_tr", 'Cancel'))
-
-    def changeIcon(self, icons):
-        icons = ':/' + str(icons) + '/'
-
-        self.ok_pushButton.setIcon(QIcon(icons + 'ok'))
-        self.cancel_pushButton.setIcon(QIcon(icons + 'remove'))
-        self.folder_pushButton.setIcon(QIcon(icons + 'folder'))

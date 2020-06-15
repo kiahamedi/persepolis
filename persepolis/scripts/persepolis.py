@@ -13,26 +13,33 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from persepolis.gui import resources
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QApplication, QStyleFactory
+import traceback
+from persepolis.scripts.error_window import ErrorWindow
+from persepolis.gui.palettes import DarkFusionPalette, LightFusionPalette
+from PyQt5.QtCore import QFile, QTextStream, QCoreApplication, QSettings, Qt
+import json
+import struct
+import argparse
+from persepolis.scripts import osCommands
 from persepolis.scripts.useful_tools import osAndDesktopEnvironment, determineConfigFolder
+from persepolis.constants import OS
 from copy import deepcopy
 import sys
 import os
 
 # finding os platform
-os_type, desktop_env = osAndDesktopEnvironment()  
+os_type, desktop_env = osAndDesktopEnvironment()
 
 # Don't run persepolis as root!
-if os_type == 'Linux' or os_type == 'FreeBSD'  or os_type == 'OpenBSD' or os_type == 'Darwin':
+if os_type in (OS.UNIX_LIKE + [OS.OSX]):
     uid = os.getuid()
     if uid == 0:
         print('Do not run persepolis as root.')
         sys.exit(1)
 
-
-from persepolis.scripts import osCommands
-import argparse
-import struct
-import json
 
 # initialization
 
@@ -46,12 +53,11 @@ config_folder = determineConfigFolder()
 persepolis_tmp = os.path.join(config_folder, 'persepolis_tmp')
 
 
-
-# if lock_file_validation == True >> not another instanse running,
-# else >> another instanse of persepolis is running now.
+# if lock_file_validation == True >> not another instance running,
+# else >> another instance of persepolis is running now.
 global lock_file_validation
 
-if os_type != 'Windows':
+if os_type != OS.WINDOWS:
     import fcntl
     user_name_split = home_address.split('/')
     user_name = user_name_split[2]
@@ -64,11 +70,11 @@ if os_type != 'Windows':
     try:
         fcntl.lockf(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-        lock_file_validation = True # Lock file created successfully!
+        lock_file_validation = True  # Lock file created successfully!
     except IOError:
-        lock_file_validation = False # creating lock_file was unsuccessful! So persepolis is still running
+        lock_file_validation = False  # creating lock_file was unsuccessful! So persepolis is still running
 
-else: # for windows
+else:  # for windows
     # pypiwin32 must be installed by pip
     from win32event import CreateMutex
     from win32api import GetLastError
@@ -78,37 +84,28 @@ else: # for windows
     handle = CreateMutex(None, 1, 'persepolis_download_manager')
 
     if GetLastError() == ERROR_ALREADY_EXISTS:
-        lock_file_validation = False 
+        lock_file_validation = False
     else:
         lock_file_validation = True
 
 # run persepolis mainwindow
-if lock_file_validation: 
+if lock_file_validation:
     from persepolis.scripts import initialization
     from persepolis.scripts.mainwindow import MainWindow
 
 # set "persepolis" name for this process in linux and bsd
-    if os_type == 'Linux' or os_type == 'FreeBSD'  or os_type == 'OpenBSD':  
+    if os_type in OS.UNIX_LIKE:
         try:
             from setproctitle import setproctitle
             setproctitle("persepolis")
         except:
             from persepolis.scripts import logger
             logger.sendToLog('setproctitle is not installed!', "ERROR")
- 
-
-from PyQt5.QtWidgets import QApplication, QStyleFactory  
-from PyQt5.QtGui import QFont   
-from PyQt5.QtCore import QFile, QTextStream, QCoreApplication, QSettings, Qt
-from persepolis.gui.palettes import DarkRedPallete, DarkBluePallete, ArcDarkRedPallete, ArcDarkBluePallete, LightRedPallete, LightBluePallete
-from persepolis.gui import resources 
-from persepolis.scripts.error_window import ErrorWindow
-import traceback
-
 
 
 # load persepolis_settings
 persepolis_setting = QSettings('persepolis_download_manager', 'persepolis')
+
 
 class PersepolisApplication(QApplication):
     def __init__(self, argv):
@@ -125,107 +122,79 @@ class PersepolisApplication(QApplication):
         self.persepolis_font_size = font_size
 
         if custom_font == 'yes':
-            self.setFont(QFont(font , font_size ))
-# color_scheme 
+            self.setFont(QFont(font, font_size))
+# color_scheme
+
     def setPersepolisColorScheme(self, color_scheme):
         self.persepolis_color_scheme = color_scheme
-        if color_scheme == 'Persepolis Old Dark Red':
-            persepolis_dark_red = DarkRedPallete()
-            self.setPalette(persepolis_dark_red)
-            self.setStyleSheet("QMenu::item:selected {background-color : #d64937 ;color : white} QToolTip { color: #ffffff; background-color: #353535; border: 1px solid white; }")
-        elif color_scheme == 'Persepolis  Old Dark Blue':
-            persepolis_dark_blue = DarkBluePallete()
-            self.setPalette(persepolis_dark_blue)
-            self.setStyleSheet("QMenu::item:selected { background-color : #2a82da ;color : white } QToolTip { color: #ffffff; background-color: #353535; border: 1px solid white; }")
-        elif color_scheme == 'Persepolis ArcDark Red':
-            persepolis_arcdark_red = ArcDarkRedPallete()
-            self.setPalette(persepolis_arcdark_red)
-            self.setStyleSheet("QMenu::item:selected {background-color : #bf474d ; color : white} QToolTip { color: #ffffff; background-color: #353945; border: 1px solid white; } QPushButton {background-color: #353945  } QTabWidget {background-color : #353945;} QMenu {background-color: #353945 }")
-
-        elif color_scheme == 'Persepolis ArcDark Blue':
-            persepolis_arcdark_blue = ArcDarkBluePallete()
-            self.setPalette(persepolis_arcdark_blue)
-            self.setStyleSheet("QMenu::item:selected {background-color : #5294e2 ; color : white } QToolTip { color: #ffffff; background-color: #353945; border: 1px solid white; } QPushButton {background-color: #353945  } QTabWidget {background-color : #353945;} QMenu {background-color: #353945 }")
-        elif color_scheme == 'Persepolis Old Light Red':
-            persepolis_light_red = LightRedPallete()
-            self.setPalette(persepolis_light_red)
-            self.setStyleSheet("QMenu::item:selected {background-color : #d64937 ;color : white} QToolTip { color: #ffffff; background-color: #353535; border: 1px solid white; }")
-
-        elif color_scheme == 'Persepolis Old Light Blue':
-            persepolis_light_blue = LightBluePallete()
-            self.setPalette(persepolis_light_blue)
-            self.setStyleSheet("QMenu::item:selected { background-color : #2a82da ;color : white } QToolTip { color: #ffffff; background-color: #353535; border: 1px solid white; }")
-
-        elif color_scheme == 'Persepolis Dark Blue':
+        if color_scheme == 'Dark Fusion':
+            dark_fusion = DarkFusionPalette()
+            self.setPalette(dark_fusion)
             file = QFile(":/dark_style.qss")
             file.open(QFile.ReadOnly | QFile.Text)
             stream = QTextStream(file)
             self.setStyleSheet(stream.readAll())
 
-        elif color_scheme == 'Persepolis Light Blue':
+        elif color_scheme == 'Light Fusion':
+            dark_fusion = LightFusionPalette()
+            self.setPalette(dark_fusion)
             file = QFile(":/light_style.qss")
             file.open(QFile.ReadOnly | QFile.Text)
             stream = QTextStream(file)
             self.setStyleSheet(stream.readAll())
 
 
-
-
-# create  terminal arguments  
-
-
+# create  terminal arguments
 parser = argparse.ArgumentParser(description='Persepolis Download Manager')
 #parser.add_argument('chromium', nargs = '?', default = 'no', help='this switch is used for chrome native messaging in Linux and Mac')
-parser.add_argument('--link', action='store', nargs = 1, help='Download link.(Use "" for links)')
-parser.add_argument('--referer', action='store', nargs = 1, help='Set an http referrer (Referer). This affects all http/https downloads.  If * is given, the download URI is also used as the referrer.')
-parser.add_argument('--cookie', action='store', nargs = 1, help='Cookie')
-parser.add_argument('--agent', action='store', nargs = 1, help='Set user agent for HTTP(S) downloads.  Default: aria2/$VERSION, $VERSION is replaced by package version.')
-parser.add_argument('--headers',action='store', nargs = 1, help='Append HEADER to HTTP request header. ')
-parser.add_argument('--name', action='store', nargs = 1, help='The  file  name  of  the downloaded file. ')
+parser.add_argument('--link', action='store', nargs=1, help='Download link.(Use "" for links)')
+parser.add_argument('--referer', action='store', nargs=1,
+                    help='Set an http referrer (Referer). This affects all http/https downloads.  If * is given, the download URI is also used as the referrer.')
+parser.add_argument('--cookie', action='store', nargs=1, help='Cookie')
+parser.add_argument('--agent', action='store', nargs=1,
+                    help='Set user agent for HTTP(S) downloads.  Default: aria2/$VERSION, $VERSION is replaced by package version.')
+parser.add_argument('--headers', action='store', nargs=1, help='Append HEADER to HTTP request header. ')
+parser.add_argument('--name', action='store', nargs=1, help='The  file  name  of  the downloaded file. ')
 parser.add_argument('--default', action='store_true', help='restore default setting')
 parser.add_argument('--clear', action='store_true', help='Clear download list and user setting!')
-parser.add_argument('--tray', action='store_true', help="Persepolis is starting in tray icon. It's useful when you want to put persepolis in system's startup.")
-parser.add_argument('--parent-window', action='store', nargs = 1, help='this switch is used for chrome native messaging in Windows')
-parser.add_argument('--version', action='version', version='Persepolis Download Manager 3.1.0')
+parser.add_argument('--tray', action='store_true',
+                    help="Persepolis is starting in tray icon. It's useful when you want to put persepolis in system's startup.")
+parser.add_argument('--parent-window', action='store', nargs=1,
+                    help='this switch is used for chrome native messaging in Windows')
+parser.add_argument('--version', action='version', version='Persepolis Download Manager 3.2.0')
 
 
-parser.add_argument('args', nargs=argparse.REMAINDER)
+# Clears unwanted args ( like args from Browers via NHM )
+# unknown arguments (may sent by browser) will save in unknownargs.
+args, unknownargs = parser.parse_known_args()
 
-#args, unknown = parser.parse_known_args(['chromium','--link','--referer','--cookie','--agent','--headers','--name','--default','--clear','--tray','--parent-window','--version'])
-args  = parser.parse_args()
-
-# terminal arguments are send download information with terminal arguments(link , referer , cookie , agent , headers , name )
-# persepolis plugins (for chromium and chrome and opera and vivaldi and firefox) are use native message host system for 
-# sending download information to persepolis.
-# see this repo for more information:
-#   https://github.com/persepolisdm/Persepolis-WebExtension
-
-# if --execute >> yes  >>> persepolis main window  will start. 
+# if --execute >> yes  >>> persepolis main window  will start.
 # if --execute >> no >>> persepolis started before!
-
+browser_url = True
 
 add_link_dictionary = {}
 plugin_list = []
-browser_plugin_dict ={'link': None,
-            'referer': None,
-            'load_cookies':None,
-            'user_agent': None,
-            'header': None,
-            'out': None
-            }
+browser_plugin_dict = {'link': None,
+                       'referer': None,
+                       'load_cookies': None,
+                       'user_agent': None,
+                       'header': None,
+                       'out': None
+                       }
 
 
-#if args.chromium != 'no' or args.parent_window:
-if args.parent_window or args.args:
+# This dirty trick will show Persepolis version when there are unknown args
+# Unknown args are sent by Browsers for NHM
+if args.parent_window or unknownargs:
 
-# Platform specific configuration
-    if os_type == "Windows":
+    # Platform specific configuration
+    if os_type == OS.WINDOWS:
         # Set the default I/O mode to O_BINARY in windows
         import msvcrt
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
-    # Send message to browsers plugin 
+    # Send message to browsers plugin
     message = '{"enable": true, "version": "1.85"}'.encode('utf-8')
     sys.stdout.buffer.write((struct.pack('i', len(message))))
     sys.stdout.buffer.write(message)
@@ -238,31 +207,43 @@ if args.parent_window or args.args:
 
     # Read the text (JSON object) of the message.
     text = sys.stdin.buffer.read(text_length).decode("utf-8")
-    
+
     if text:
-        new_list = json.loads(text)
 
-        for item in new_list['url_links']:
-            copy_dict = deepcopy(browser_plugin_dict)
-            if 'url' in item.keys():
-                copy_dict['link'] = str(item['url'])
+        new_dict = json.loads(text)
 
-                if 'header' in item.keys() and item['header'] != '':
-                    copy_dict['header'] = item['header']
+        if 'url_links' in new_dict:
 
-                if 'referrer' in item.keys() and item['referrer'] != '':
-                    copy_dict['referer'] = item['referrer']
+            # new_dict is sended by persepolis browser add-on.
+            # new_dict['url_links'] contains some lists.
+            # every list contains link information.
+            for item in new_dict['url_links']:
 
-                if 'filename' in item.keys() and item['filename'] != '':
-                    copy_dict['out'] = os.path.basename(str(item['filename']))
-                
-                if 'useragent' in item.keys() and item['useragent'] != '':
-                    copy_dict['user_agent'] = item['useragent']
-                
-                if 'cookies' in item.keys() and item['cookies'] != '':
-                    copy_dict['load_cookies'] = item['cookies']
+                copy_dict = deepcopy(browser_plugin_dict)
 
-                plugin_list.append(copy_dict)
+                if 'url' in item.keys():
+                    copy_dict['link'] = str(item['url'])
+
+                    if 'header' in item.keys() and item['header'] != '':
+                        copy_dict['header'] = item['header']
+
+                    if 'referrer' in item.keys() and item['referrer'] != '':
+                        copy_dict['referer'] = item['referrer']
+
+                    if 'filename' in item.keys() and item['filename'] != '':
+                        copy_dict['out'] = os.path.basename(str(item['filename']))
+
+                    if 'useragent' in item.keys() and item['useragent'] != '':
+                        copy_dict['user_agent'] = item['useragent']
+
+                    if 'cookies' in item.keys() and item['cookies'] != '':
+                        copy_dict['load_cookies'] = item['cookies']
+
+                    plugin_list.append(copy_dict)
+
+        else:
+            browser_url = False
+
 
 # persepolis --clear >> remove config_folder
 if args.clear:
@@ -278,7 +259,6 @@ if args.clear:
     persepolis_db.closeConnections()
 
     # Reset persepolis_setting
-    persepolis_setting = QSettings('persepolis_download_manager', 'persepolis')
     persepolis_setting.clear()
     persepolis_setting.sync()
 
@@ -286,41 +266,40 @@ if args.clear:
 
 # persepolis --default >> remove persepolis setting.
 if args.default:
-    persepolis_setting = QSettings('persepolis_download_manager', 'persepolis')
     persepolis_setting.clear()
     persepolis_setting.sync()
     print ('Persepolis restored default')
     sys.exit(0)
 
 
-if args.link :
-    add_link_dictionary ['link'] = "".join(args.link)
-    
-# if plugins call persepolis, then just start persepolis in system tray 
+if args.link:
+    add_link_dictionary['link'] = "".join(args.link)
+
+# if plugins call persepolis, then just start persepolis in system tray
     args.tray = True
 
-if args.referer :
+if args.referer:
     add_link_dictionary['referer'] = "".join(args.referer)
 else:
     add_link_dictionary['referer'] = None
 
-if args.cookie :
+if args.cookie:
     add_link_dictionary['load_cookies'] = "".join(args.cookie)
 else:
     add_link_dictionary['load_cookies'] = None
 
-if args.agent :
+if args.agent:
     add_link_dictionary['user_agent'] = "".join(args.agent)
 else:
     add_link_dictionary['user_agent'] = None
 
-if args.headers :
+if args.headers:
     add_link_dictionary['header'] = "".join(args.headers)
 else:
     add_link_dictionary['header'] = None
 
-if args.name :
-    add_link_dictionary ['out'] = "".join(args.name)
+if args.name:
+    add_link_dictionary['out'] = "".join(args.name)
 else:
     add_link_dictionary['out'] = None
 
@@ -331,27 +310,28 @@ else:
 
 
 # when browsers plugin calls persepolis or user runs persepolis by terminal arguments,
-# then persepolis creats a request file in persepolis_tmp folder and link information added to
+# then persepolis creates a request file in persepolis_tmp folder and link information added to
 # plugins_db.db file(see data_base.py for more information).
 # persepolis mainwindow checks persepolis_tmp for plugins request file every 2 seconds (see CheckingThread class in mainwindow.py)
-# when requset received in CheckingThread, a popup window (AddLinkWindow) comes up and window gets additional download information
+# when request received in CheckingThread, a popup window (AddLinkWindow) comes up and window gets additional download information
 # from user (port , proxy , ...) and download starts and request file deleted
 
-if ('link' in add_link_dictionary.keys()):   
-    plugin_dict ={'link': add_link_dictionary['link'],
-                    'referer': add_link_dictionary['referer'],
-                    'load_cookies': add_link_dictionary['load_cookies'],
-                    'user_agent': add_link_dictionary['user_agent'],
-                    'header': add_link_dictionary['header'],
-                    'out': add_link_dictionary['out']
-                    }
+if ('link' in add_link_dictionary.keys()):
+    plugin_dict = {'link': add_link_dictionary['link'],
+                   'referer': add_link_dictionary['referer'],
+                   'load_cookies': add_link_dictionary['load_cookies'],
+                   'user_agent': add_link_dictionary['user_agent'],
+                   'header': add_link_dictionary['header'],
+                   'out': add_link_dictionary['out']
+                   }
 
     plugin_list.append(plugin_dict)
 
 if len(plugin_list) != 0:
+
     # import PluginsDB
     from persepolis.scripts.data_base import PluginsDB
-    
+
     # create an object for PluginsDB
     plugins_db = PluginsDB()
 
@@ -366,23 +346,50 @@ if len(plugin_list) != 0:
     osCommands.touch(plugin_ready)
 
     # start persepolis in system tray
-    start_in_tray = True 
+    start_in_tray = True
 
+
+# start persepolis in system tray if browser executed
+# and if user select this option in preferences window.
+if str(persepolis_setting.value('settings/browser-persepolis')) == 'yes' and (args.parent_window or unknownargs):
+    start_persepolis_if_browser_executed = True
+    start_in_tray = True
+else:
+    start_persepolis_if_browser_executed = False
 
 
 def main():
     # if lock_file is existed , it means persepolis is still running!
-    if lock_file_validation:  
+    if lock_file_validation and (not((args.parent_window or unknownargs) and browser_url == False) or ((args.parent_window or unknownargs) and start_persepolis_if_browser_executed)):
+
+        # set QT_AUTO_SCREEN_SCALE_FACTOR to 1 for "high DPI displays"
+        os.environ['QT_AUTO_SCREEN_SCALE_FACTOR'] = '1'
+
         # run mainwindow
 
         # set color_scheme and style
         # see palettes.py and setting.py
 
+        # this line is added fot fixing persepolis view in HighDpi displays
+        # more information at: https://doc.qt.io/qt-5/highdpi.html
+        try:
+            QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        except:
+            from persepolis.scripts import logger
+
+            # write error_message in log file.
+            logger.sendToLog('Qt.AA_EnableHighDpiScaling is not available!', "ERROR")
+
+
+        # create QApplication
         persepolis_download_manager = PersepolisApplication(sys.argv)
+
+        # setQuitOnLastWindowClosed(False) is needed to prevent persepolis exiting,
+        # when it's minimized in system tray.
+        persepolis_download_manager.setQuitOnLastWindowClosed(False)
 
         # Enable High DPI display with PyQt5
         try:
-            persepolis_download_manager.setAttribute(Qt.AA_EnableHighDpiScaling)
             if hasattr(QStyleFactory, 'AA_UseHighDpiPixmaps'):
                 persepolis_download_manager.setAttribute(Qt.AA_UseHighDpiPixmaps)
         except:
@@ -391,13 +398,12 @@ def main():
             # write error_message in log file.
             logger.sendToLog('Qt.AA_UseHighDpiPixmaps is not available!', "ERROR")
 
-        # set organization name and domain and apllication name
+        # set organization name and domain and application name
         QCoreApplication.setOrganizationName('persepolis_download_manager')
         QCoreApplication.setApplicationName('persepolis')
 
         # Persepolis setting
         persepolis_download_manager.setting = QSettings()
-
 
         # get user's desired font and style , ... from setting
         custom_font = persepolis_download_manager.setting.value('settings/custom-font')
@@ -406,7 +412,6 @@ def main():
         style = persepolis_download_manager.setting.value('settings/style')
         color_scheme = persepolis_download_manager.setting.value('settings/color-scheme')
         ui_direction = persepolis_download_manager.setting.value('ui_direction')
-
 
         # set style
         persepolis_download_manager.setPersepolisStyle(style)
@@ -417,11 +422,10 @@ def main():
         # set color_scheme
         persepolis_download_manager.setPersepolisColorScheme(color_scheme)
 
-        
         # set ui direction
         if ui_direction == 'rtl':
             persepolis_download_manager.setLayoutDirection(Qt.RightToLeft)
-        
+
         elif ui_direction in 'ltr':
             persepolis_download_manager.setLayoutDirection(Qt.LeftToRight)
 
@@ -443,14 +447,14 @@ def main():
             # Reset persepolis
             error_window = ErrorWindow(error_message)
             error_window.show()
-         
+
         sys.exit(persepolis_download_manager.exec_())
 
-    else:
+    elif not((args.parent_window or unknownargs)):
 
-    # this section warns user that program is still running and no need to run it again
-    # and creating a file to notify mainwindow for showing itself!
-    # (see CheckingThread in mainwindow.py for more information)
+        # this section warns user that program is still running and no need to run it again
+        # and creating a file to notify mainwindow for showing itself!
+        # (see CheckingThread in mainwindow.py for more information)
         if len(plugin_list) == 0:
 
             show_window_file = os.path.join(persepolis_tmp, 'show-window')
@@ -458,4 +462,3 @@ def main():
             f.close()
 
         sys.exit(0)
-

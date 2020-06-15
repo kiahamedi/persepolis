@@ -15,9 +15,6 @@
 #
 
 
-
-
-
 import os
 import warnings
 import sys
@@ -48,7 +45,7 @@ except:
 
 # python3-requests
 try:
-    import requests 
+    import requests
     print('python3-requests is found!')
 except:
     print('Error : requests is not installed!')
@@ -114,6 +111,15 @@ else:
     print('Warning: sound-theme-freedesktop is not installed! you need this package for sound notifications!')
     not_installed = not_installed + 'sound-theme-freedesktop'
 
+# ffmpeg
+answer = os.system('ffmpeg -version 1>/dev/null')
+if answer != 0:
+    print("Warning: ffmpeg not installed!")
+    not_installed = not_installed + 'ffmpeg, '
+else:
+    print('ffmpeg is found!')
+
+
 # show warning , if dependencies not installed!
 if not_installed != '':
     print('########################')
@@ -128,8 +134,8 @@ if not_installed != '':
         sys.exit(1)
 
 if sys.argv[1] == "test":
-   print('We have not unit test :)')
-   sys.exit('0')
+    print('We have not unit test :)')
+    sys.exit('0')
 
 DESCRIPTION = 'Persepolis Download Manager'
 
@@ -140,7 +146,7 @@ if os_type == 'Linux':
         ('/usr/share/metainfo/', ['xdg/com.github.persepolisdm.persepolis.appdata.xml']),
         ('/usr/share/pixmaps/', ['resources/persepolis.svg']),
         ('/usr/share/pixmaps/', ['resources/persepolis-tray.svg'])
-        ]
+    ]
 elif os_type == 'FreeBSD' or os_type == 'OpenBSD':
     DATA_FILES = [
         ('/usr/local/share/man/man1/', ['man/persepolis.1.gz']),
@@ -148,54 +154,53 @@ elif os_type == 'FreeBSD' or os_type == 'OpenBSD':
         ('/usr/local/share/metainfo/', ['xdg/com.github.persepolisdm.persepolis.appdata.xml']),
         ('/usr/local/share/pixmaps/', ['resources/persepolis.svg']),
         ('/usr/local/share/pixmaps/', ['resources/persepolis-tray.svg'])
-        ]
-
+    ]
 
 
 # finding current directory
 cwd = os.path.abspath(__file__)
 setup_dir = os.path.dirname(cwd)
 
-#clearing __pycache__
+# clearing __pycache__
 src_pycache = os.path.join(setup_dir, 'persepolis', '__pycache__')
 gui_pycache = os.path.join(setup_dir, 'persepolis', 'gui', '__pycache__')
 scripts_pycache = os.path.join(setup_dir, 'persepolis', 'scripts', '__pycache__')
+constants_pycache = os.path.join(setup_dir, 'persepolis', 'constants', '__pycache__')
 
-for folder in [src_pycache, gui_pycache, scripts_pycache]:
+for folder in [src_pycache, gui_pycache, scripts_pycache, constants_pycache]:
     if os.path.isdir(folder):
         shutil.rmtree(folder)
         print(str(folder)
-            + ' is removed!')
+              + ' is removed!')
 
 
 # Creating man page file
 persepolis_man_page = os.path.join(setup_dir, 'man', 'persepolis.1')
 os.system('gzip -f -k -9 "'
-        + persepolis_man_page
-        + '"')
+          + persepolis_man_page
+          + '"')
 print('man page file is generated!')
 
 setup(
-    name = 'persepolis',
-    version = '3.1.0',
-    license = 'GPL3',
-    description = DESCRIPTION,
-    long_description = DESCRIPTION,
-    include_package_data = True,
-    url = 'https://github.com/persepolisdm/persepolis',
-    author = 'AliReza AmirSamimi',
-    author_email = 'alireza.amirsamimi@gmail.com',
-    maintainer = 'AliReza AmirSamimi',
-    maintainer_email = 'alireza.amirsamimi@gmail.com',
-    packages = (
-        'persepolis',
+    name='persepolis',
+    version='3.2.0',
+    license='GPL3',
+    description=DESCRIPTION,
+    long_description=DESCRIPTION,
+    include_package_data=True,
+    url='https://github.com/persepolisdm/persepolis',
+    author='AliReza AmirSamimi',
+    author_email='alireza.amirsamimi@gmail.com',
+    maintainer='AliReza AmirSamimi',
+    maintainer_email='alireza.amirsamimi@gmail.com',
+    packages=(
+        'persepolis', 'persepolis.constants',
         'persepolis.scripts', 'persepolis.gui',
-        ),
-    data_files = DATA_FILES,
+    ),
+    data_files=DATA_FILES,
     entry_points={
         'console_scripts': [
-              'persepolis = persepolis.__main__'
+            'persepolis = persepolis.__main__'
         ]
     }
 )
-
